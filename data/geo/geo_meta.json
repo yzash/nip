@@ -1,0 +1,9 @@
+{
+  "sources": {
+    "adm2": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/IDN/ADM2/geoBoundaries-IDN-ADM2_simplified.geojson",
+    "adm1": "https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/IDN/ADM1/geoBoundaries-IDN-ADM1_simplified.geojson"
+  },
+  "licence": "ADM2: BPS/OCHA ROAP, CC BY 3.0 IGO. ADM1 attribution: OpenStreetMap contributors, ODbL.",
+  "provinces": 38,
+  "districts": 514
+}

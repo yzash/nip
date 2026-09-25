@@ -1,0 +1,141 @@
+{
+  "_note": "Role scope and decision rights for the NICC prototype (PRD §4, §8). Names are synthetic. Thresholds are placeholders pending IOH's delegation-of-authority matrix.",
+  "roles": [
+    {
+      "role_code": "EXEC",
+      "title": "COO / Head of Network",
+      "user": "Adrian Wibisono",
+      "scope_type": "national",
+      "scope_ids": ["ID"],
+      "functions": ["Planning", "Deployment", "Operations", "CX", "Procurement"],
+      "decision_rights": ["view", "recommend", "approve"],
+      "approves": ["capex_major", "program_above_threshold", "capex_envelope"],
+      "landing": "/map",
+      "monday_decision": "Approve or defer two CapEx programs above threshold",
+      "queue_order": "priority"
+    },
+    {
+      "role_code": "PLAN",
+      "title": "Head of Planning",
+      "user": "Maya Kartika",
+      "scope_type": "national",
+      "scope_ids": ["ID"],
+      "functions": ["Planning"],
+      "decision_rights": ["view", "recommend", "approve"],
+      "approves": ["capex_minor", "decision_above_threshold", "boq_variance", "capex_class_move"],
+      "landing": "/planner",
+      "monday_decision": "Approve the plan for the 14 uncovered sites",
+      "queue_order": "priority"
+    },
+    {
+      "role_code": "DEPLOY",
+      "title": "Head of Deployment / Rollout",
+      "user": "Bayu Prasetyo",
+      "scope_type": "national",
+      "scope_ids": ["ID"],
+      "functions": ["Deployment"],
+      "decision_rights": ["view", "recommend", "approve"],
+      "approves": ["boq_variance", "vendor_allocation", "rfs_acceptance", "po_release"],
+      "landing": "/programs",
+      "monday_decision": "Reallocate vendor capacity on the 3 at-risk programs",
+      "queue_order": "priority"
+    },
+    {
+      "role_code": "OPS",
+      "title": "Head of Operations / NOC",
+      "user": "Rudi Hartono",
+      "scope_type": "national",
+      "scope_ids": ["ID"],
+      "functions": ["Operations"],
+      "decision_rights": ["view", "recommend", "approve", "execute"],
+      "approves": ["noncapex_zero", "noncapex_opex", "dispatch_priority"],
+      "landing": "/incidents",
+      "monday_decision": "Approve the transport reroute and dispatch",
+      "queue_order": "exposure"
+    },
+    {
+      "role_code": "CX",
+      "title": "Head of Customer Experience",
+      "user": "Nadia Rahmawati",
+      "scope_type": "national",
+      "scope_ids": ["ID"],
+      "functions": ["CX"],
+      "decision_rights": ["view", "recommend", "approve"],
+      "approves": ["customer_action"],
+      "landing": "/map?layer=cnx",
+      "monday_decision": "Approve proactive outreach to the cohort ahead of RFS",
+      "queue_order": "churn"
+    },
+    {
+      "role_code": "REGION",
+      "title": "Regional Network Manager",
+      "user": "Andi Makkasau",
+      "scope_type": "region",
+      "scope_ids": ["Sulawesi"],
+      "scope_options": ["Jabodetabek", "Java", "Sumatra", "Kalimantan", "Sulawesi", "Bali Nusra", "Papua Maluku"],
+      "functions": ["Operations", "Planning"],
+      "decision_rights": ["view", "recommend", "approve", "execute", "close"],
+      "approves": ["noncapex_opex", "decision_below_threshold", "capex_escalation"],
+      "landing": "/incidents",
+      "monday_decision": "Escalate 2 incidents to CapEx, close 2 as false positives",
+      "queue_order": "priority"
+    },
+    {
+      "role_code": "FIELD",
+      "title": "Field Engineer / Site Supervisor",
+      "user": "Rizky Pratama",
+      "engineer_id": "ENG-JBR-07",
+      "scope_type": "district",
+      "scope_ids": ["Bekasi"],
+      "functions": ["Operations"],
+      "decision_rights": ["view", "execute", "close"],
+      "approves": [],
+      "landing": "/field",
+      "monday_decision": "Complete and evidence 6 work orders",
+      "queue_order": "due"
+    },
+    {
+      "role_code": "PROC",
+      "title": "Procurement and Warehouse",
+      "user": "Lina Susanti",
+      "scope_type": "national",
+      "scope_ids": ["ID"],
+      "functions": ["Procurement"],
+      "decision_rights": ["view", "recommend", "approve"],
+      "approves": ["po_release", "stock_prepositioning"],
+      "landing": "/planner?tab=readiness",
+      "monday_decision": "Release 2 POs and approve pre-positioning",
+      "queue_order": "priority"
+    }
+  ],
+  "policy": {
+    "decision_threshold_idr": 200000000,
+    "cfo_cosign_above_idr": 2000000000,
+    "opex_auto_approve_below_idr": 20000000,
+    "customer_auto_approve_below": 1000,
+    "boq_variance_pct": 10,
+    "exec_incident_min_exposure_idr": 500000000,
+    "exec_incident_min_sites": 20,
+    "cx_incident_min_churn_subs": 5000,
+    "red_min_probability": 0.6,
+    "owner_assignment_sla_hours": 4,
+    "priority_weights": { "exposure": 1.0, "probability": 1.0, "urgency": 1.0 },
+    "colour_thresholds": {
+      "health": { "green": 80, "amber": 60, "dir": "high" },
+      "cnx": { "green": 75, "amber": 65, "dir": "high" },
+      "availability": { "green": 99.5, "amber": 99.0, "dir": "high" },
+      "bad_session": { "green": 5, "amber": 10, "dir": "low" },
+      "prb": { "green": 70, "amber": 85, "dir": "low" },
+      "failure": { "green": 30, "amber": 60, "dir": "low" },
+      "link_util": { "green": 70, "amber": 85, "dir": "low" },
+      "cache_hit": { "green": 90, "amber": 80, "dir": "high" }
+    }
+  },
+  "intervention_classes": [
+    { "id": "noncapex_zero", "label": "Non-CapEx, zero cost", "examples": "Parameter change, load balancing, antenna tilt, carrier refarming", "approver": "NOC shift lead", "approver_roles": ["OPS", "REGION"], "auto": "Yes, with post-hoc review" },
+    { "id": "noncapex_opex", "label": "Non-CapEx, OpEx", "examples": "Site visit, battery swap, generator service, cleaning, transport reroute", "approver": "Regional Network Manager", "approver_roles": ["REGION", "OPS"], "auto": "Below IDR 20m" },
+    { "id": "capex_minor", "label": "CapEx, minor", "examples": "Carrier add, sector add, microwave upgrade, solar or battery retrofit, tower loading change", "approver": "Head of Planning", "approver_roles": ["PLAN"], "auto": "No" },
+    { "id": "capex_major", "label": "CapEx, major", "examples": "New site, fibre build, core capacity", "approver": "Head of Network, CFO above IDR 2bn", "approver_roles": ["EXEC"], "auto": "No" },
+    { "id": "customer_action", "label": "Customer action", "examples": "Proactive SMS, credit, retention offer", "approver": "Head of CX", "approver_roles": ["CX"], "auto": "Below 1,000 customers" }
+  ]
+}

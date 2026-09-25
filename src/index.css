@@ -1,0 +1,136 @@
+@import 'maplibre-gl/dist/maplibre-gl.css';
+@import '@fontsource/plus-jakarta-sans/400.css';
+@import '@fontsource/plus-jakarta-sans/500.css';
+@import '@fontsource/plus-jakarta-sans/600.css';
+@import '@fontsource/plus-jakarta-sans/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: #0f1115;
+  color: #f2f3f5;
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+  font-size: 13.5px;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'tnum' 1;
+}
+/* Tabular figures for every number (PRD §11). */
+.tnum,
+td,
+th {
+  font-variant-numeric: tabular-nums;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #353b48 transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #353b48;
+}
+select,
+input,
+textarea {
+  color: #f2f3f5;
+  outline: none;
+}
+select:focus,
+input:focus,
+textarea:focus {
+  border-color: #ffd100 !important;
+}
+button:focus-visible {
+  outline: 1px solid #ffd100;
+  outline-offset: 1px;
+}
+
+/* MapLibre chrome in the command-center palette */
+.maplibregl-ctrl-group {
+  background: #171a21 !important;
+  border: 1px solid #2a2f3a !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.maplibregl-ctrl-group button {
+  border-color: #2a2f3a !important;
+}
+.maplibregl-ctrl-group button span {
+  filter: invert(0.85);
+}
+.maplibregl-ctrl-attrib {
+  background: rgba(15, 17, 21, 0.7) !important;
+  color: #6b7280 !important;
+  font-size: 10px;
+}
+.maplibregl-ctrl-attrib a {
+  color: #a3aab8 !important;
+}
+.maplibregl-canvas {
+  outline: none;
+}
+
+input[type='range'].scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 22px;
+}
+input[type='range'].scrub::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+input[type='range'].scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 22px;
+  margin-top: -9px;
+  background: #ffd100;
+  border: 2px solid #0f1115;
+}
+input[type='range'].scrub::-moz-range-thumb {
+  width: 12px;
+  height: 20px;
+  background: #ffd100;
+  border: 2px solid #0f1115;
+  border-radius: 0;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-page {
+    position: static !important;
+    overflow: visible !important;
+  }
+}

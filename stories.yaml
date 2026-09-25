@@ -1,0 +1,144 @@
+# NICC prototype — story clusters and demo calendar.
+#
+# Edit this file to reshape the demo without touching generate.py.
+# Every number here is synthetic and a placeholder for IOH calibration (PRD §3).
+# Re-run:  python3 generate.py
+
+seed: 20260928
+now: "2026-09-28T08:00:00+07:00"   # Monday 08:00 WIB, the PRD "Monday morning" moment
+freshness:
+  kpi: D-1          # site KPIs, CNX, alarms (Netra daily batch)
+  smart_capex: D-5  # Smart CapEx ranking runs on D-5 data
+sites_total: 6000
+kpi_days: 90
+
+# Four story clusters that must exist (PRD §10).
+stories:
+  bekasi_capacity:
+    title: "Bekasi capacity cluster"
+    province: JBR
+    district: "Bekasi"
+    failure_class: capacity
+    crossing_week: 3            # PRB saturation predicted at W+3 (23 days)
+    exposure_idr_month: 1800000000
+    covered: false              # not in any program
+    sites:
+      - [Cikarang Barat, 107.100, -6.268]
+      - [Cikarang Utara, 107.150, -6.262]
+      - [Cikarang Selatan, 107.160, -6.335]
+      - [Cikarang Pusat, 107.172, -6.312]
+      - [Cikarang Timur, 107.212, -6.282]
+      - [Cibitung, 107.088, -6.238]
+      - [Tambun Selatan, 107.052, -6.262]
+      - [Tambun Utara, 107.062, -6.205]
+      - [Setu, 107.030, -6.335]
+      - [Serang Baru, 107.098, -6.372]
+      - [Jababeka, 107.158, -6.292]
+      - [MM2100 Industrial, 107.080, -6.292]
+      - [Lippo Cikarang, 107.142, -6.332]
+      - [Deltamas, 107.188, -6.372]
+
+  sulsel_transport:
+    title: "South Sulawesi transport chain"
+    province: SLS
+    failure_class: transport
+    crossing_week: 2
+    exposure_idr_month: 2400000000
+    link:
+      id: "BB-SLS-0001"
+      name: "Makassar core – Mandai MW trunk"
+      type: microwave
+      capacity_gbps: 10
+      util_pct: 94
+      hub: [Makassar Panakkukang Core, 119.445, -5.150]
+    sites:                       # 9 sites dependent on the trunk, in chain order
+      - [Mandai, 119.510, -5.065]
+      - [Turikale, 119.578, -4.995]
+      - [Bantimurung, 119.680, -5.020]
+      - [Pangkajene, 119.560, -4.832]
+      - [Labakkang, 119.545, -4.775]
+      - [Segeri, 119.585, -4.642]
+      - [Tanete Rilau, 119.605, -4.500]
+      - [Barru, 119.628, -4.418]
+      - [Soreang Parepare, 119.632, -4.012]
+
+  surabaya_cnx:
+    title: "Surabaya postpaid 5G CNX drop"
+    province: JTM
+    district: "Kota Surabaya"
+    cluster: "SBY-5G-C03"
+    segment: postpaid
+    technology: 5G
+    cnx_drop_pts: 4.0
+    churn_risk_subs: 6200
+    capacity_predicted_sites: 6   # of the 12, predicted to saturate inside 8 weeks
+    program_weeks_late: 3
+    sites:
+      - [Gubeng, 112.752, -7.272]
+      - [Genteng, 112.742, -7.258]
+      - [Tegalsari, 112.735, -7.276]
+      - [Wonokromo, 112.732, -7.302]
+      - [Sukolilo, 112.792, -7.290]
+      - [Mulyorejo, 112.788, -7.262]
+      - [Rungkut, 112.780, -7.328]
+      - [Tambaksari, 112.762, -7.250]
+      - [Dukuh Pakis, 112.712, -7.290]
+      - [Wiyung, 112.692, -7.312]
+      - [Tenggilis Mejoyo, 112.760, -7.320]
+      - [Sawahan, 112.720, -7.268]
+
+  cjava_power:
+    title: "Central Java power-failure cluster"
+    province: JTG
+    failure_class: power
+    crossing_week: 6
+    warehouse: WH-SMG
+    sites:
+      - [Purwodadi, 110.915, -7.088, Grobogan]
+      - [Godong, 110.770, -7.030, Grobogan]
+      - [Wirosari, 111.150, -7.100, Grobogan]
+      - [Demak Kota, 110.640, -6.892, Demak]
+      - [Mranggen, 110.520, -7.030, Demak]
+      - [Ungaran, 110.405, -7.140, Semarang]
+      - [Bawen, 110.432, -7.242, Semarang]
+      - [Ambarawa, 110.402, -7.262, Semarang]
+      - [Kendal Kota, 110.200, -6.922, Kendal]
+      - [Weleri, 110.070, -6.972, Kendal]
+      - [Boyolali Kota, 110.598, -7.532, Boyolali]
+
+# Predicted failures inside 8 weeks (probability >= 60%) by class, national sample.
+# Story sites are counted inside these totals.
+predicted_failures:
+  capacity: 41      # 27 covered by a program, 14 not (Bekasi)  — Head of Planning Monday view
+  power: 26
+  transport: 17
+  ran_hardware: 20
+  environmental: 15
+
+# Capacity sites covered by an existing program: program id -> site count (sums to 27).
+capacity_coverage:
+  PRG-2609: 6       # Surabaya 5G Phase 2 (3 weeks late -> gap flag)
+  PRG-2610: 6       # Jakarta CBD Wave 2 (gap flag)
+  PRG-2630: 4       # Bandung Raya Wave 2 (gap flag)
+  PRG-2612: 3
+  PRG-2613: 3
+  PRG-2617: 2
+  PRG-2620: 3
+
+# Persona "Monday" figures the generator enforces (PRD §4).
+monday:
+  region_manager_scope: Sulawesi
+  region_open_incidents: 9
+  region_overdue_work_orders: 4
+  field_engineer_district: "Bekasi"
+  field_work_orders_this_week: 6
+  proc_warehouse: WH-SMG
+  proc_skus_below_reorder: 3
+  proc_pos_pending_release: 2
+
+# Validation set (PRD §10): 200 sites with RFS in the last 180 days.
+validation:
+  sites: 200
+  uplift: 140
+  flat: 40
+  worse: 20
