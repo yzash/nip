@@ -438,7 +438,14 @@ export const useApp = create<State>()(
             due: addDays(today, Math.min(6, 1 + Math.floor(k / 3))),
             evidence: [],
             checklist: ['Measure mounting space and azimuths', 'Check tower loading plate', 'Power budget check', 'Photo evidence: 360° rooftop / tower', 'Upload survey form'].map((step) => ({ step, done: false })),
-            parts: p.stock.slice(0, 2).map((x) => ({ sku: x.sku, qty: Math.max(1, Math.round(x.needed / p.site_ids.length)), status: x.readiness === 'green' ? 'Ready at warehouse' : x.shortfall > 0 ? 'Awaiting PO' : 'Transfer in progress' })),
+            parts: p.stock.slice(0, 2).map((x) => {
+              // allocate stock site by site: home-warehouse stock first, then transfers, then PO
+              const per = Math.max(1, Math.round(x.needed / p.site_ids.length))
+              const covered = Math.floor((x.needed - x.shortfall) / per)
+              const src = x.sources.find((y) => y.transfer_days > 1)
+              const status = k >= covered ? 'Awaiting PO' : src && x.readiness !== 'green' ? `Transfer from ${src.warehouse.split(' ')[0]}` : 'Ready at warehouse'
+              return { sku: x.sku, qty: per, status }
+            }),
           }
         })
         const ins: Insight = {

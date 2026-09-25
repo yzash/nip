@@ -318,8 +318,10 @@ export function MapView(p: Props) {
 
     // cluster count labels
     let raf = 0
+    let removed = false
     const updateClusterLabels = () => {
       raf = 0
+      if (removed || !mapRef.current) return
       if (!map.getSource('sites') || !map.isSourceLoaded('sites')) return
       const seen = new Set<number>()
       if (map.getZoom() >= NATIONAL_MAX) {
@@ -348,6 +350,7 @@ export function MapView(p: Props) {
       if (!raf) raf = requestAnimationFrame(updateClusterLabels)
     })
     map.on('moveend', () => {
+      if (removed) return
       applySectors()
       const P = propsRef.current
       if (P.onCamera && !syncing.current) {
@@ -358,6 +361,8 @@ export function MapView(p: Props) {
     })
 
     return () => {
+      removed = true
+      if (raf) cancelAnimationFrame(raf)
       map.remove()
       mapRef.current = null
       loaded.current = false
