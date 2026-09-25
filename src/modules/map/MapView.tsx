@@ -27,6 +27,7 @@ interface Props {
   onCamera?: (c: { center: [number, number]; zoom: number }) => void
   camera?: { center: [number, number]; zoom: number } | null
   compact?: boolean
+  scoped?: boolean
 }
 
 const NATIONAL_MAX = 5.8
@@ -106,7 +107,7 @@ export function MapView(p: Props) {
         source: 'provinces',
         paint: {
           'fill-color': ['coalesce', ['feature-state', 'c'], '#171B23'],
-          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.95, NATIONAL_MAX, 0.55, 7, 0.28],
+          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.95, NATIONAL_MAX, 0.55, 7, 0.16, 9, 0.06],
         },
       })
       map.addLayer({ id: 'dist-line', type: 'line', source: 'districts', minzoom: 5.2, paint: { 'line-color': '#2C3240', 'line-width': ['interpolate', ['linear'], ['zoom'], 5.2, 0.3, 9, 0.9] } })
@@ -242,6 +243,10 @@ export function MapView(p: Props) {
       toggleLabels()
 
       loaded.current = true
+      if (propsRef.current.scoped) {
+        for (const l of ['clusters', 'site-points']) map.setLayerZoomRange(l, 4.6, 24)
+        for (const l of ['hot', 'hot-glow']) map.setLayerZoomRange(l, 0, 4.6)
+      }
       applyData()
       applyVisibility()
       applySelected()
@@ -384,9 +389,12 @@ export function MapView(p: Props) {
     ;(map.getSource('sites') as GeoJSONSource).setData({ type: 'FeatureCollection', features: feats })
     ;(map.getSource('hot') as GeoJSONSource).setData({ type: 'FeatureCollection', features: hot })
     const roll = provinceRollup(res, P.layer)
+    const scopedProv = new Set<string>()
+    if (P.scoped) for (let i = 0; i < D.sites.length; i++) if (res.inScope[i]) scopedProv.add(D.sites[i].province_id)
     for (const pr of D.provinces) {
       const r = roll.get(pr.id)
-      map.setFeatureState({ source: 'provinces', id: pr.id }, { c: r ? provColor(r.status) : '#14171D' })
+      const out = P.scoped && !scopedProv.has(pr.id)
+      map.setFeatureState({ source: 'provinces', id: pr.id }, { c: out ? '#111318' : r ? provColor(r.status) : '#14171D' })
     }
     applySectors()
   }
@@ -457,7 +465,16 @@ export function MapView(p: Props) {
     })
   }
 
-  useEffect(applyData, [p.res, p.overlays.program, p.layer])
+  useEffect(applyData, [p.res, p.overlays.program, p.layer, p.scoped])
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !loaded.current) return
+    const z = p.scoped ? 4.6 : NATIONAL_MAX
+    map.setLayerZoomRange('clusters', z, 24)
+    map.setLayerZoomRange('site-points', z, 24)
+    map.setLayerZoomRange('hot', 0, z)
+    map.setLayerZoomRange('hot-glow', 0, z)
+  }, [p.scoped])
   useEffect(applyVisibility, [p.layer, p.overlays])
   useEffect(applySelected, [p.selectedSite])
   useEffect(applyHighlight, [p.highlightSites])

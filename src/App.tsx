@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { loadDB } from '@/data/db'
 import { useApp } from '@/store/app'
 import { Gate } from '@/components/shell/Gate'
 import { Shell } from '@/components/shell/Shell'
 import { MapPage } from '@/modules/map/MapPage'
-import { SitePage } from '@/modules/site/SitePage'
-import { IncidentsPage } from '@/modules/incidents/IncidentsPage'
-import { PlannerPage } from '@/modules/planner/PlannerPage'
-import { ProgramsPage } from '@/modules/programs/ProgramsPage'
-import { ValuePage } from '@/modules/value/ValuePage'
-import { AgentsPage } from '@/modules/agents/AgentsPage'
-import { FieldPage } from '@/modules/field/FieldPage'
+
+// Modules load on demand: each route is its own chunk.
+const SitePage = lazy(() => import('@/modules/site/SitePage').then((m) => ({ default: m.SitePage })))
+const IncidentsPage = lazy(() => import('@/modules/incidents/IncidentsPage').then((m) => ({ default: m.IncidentsPage })))
+const PlannerPage = lazy(() => import('@/modules/planner/PlannerPage').then((m) => ({ default: m.PlannerPage })))
+const ProgramsPage = lazy(() => import('@/modules/programs/ProgramsPage').then((m) => ({ default: m.ProgramsPage })))
+const ValuePage = lazy(() => import('@/modules/value/ValuePage').then((m) => ({ default: m.ValuePage })))
+const AgentsPage = lazy(() => import('@/modules/agents/AgentsPage').then((m) => ({ default: m.AgentsPage })))
+const FieldPage = lazy(() => import('@/modules/field/FieldPage').then((m) => ({ default: m.FieldPage })))
 
 export default function App() {
   const [progress, setProgress] = useState({ done: 0, total: 1, label: '' })
@@ -57,6 +59,7 @@ export default function App() {
   return (
     <Gate>
       <Shell>
+        <Suspense fallback={<div className="p-6 text-sm text-faint">Loading module…</div>}>
         <Routes>
           <Route path="/" element={<Navigate to="/map" replace />} />
           <Route path="/map" element={<MapPage />} />
@@ -71,6 +74,7 @@ export default function App() {
           <Route path="/field" element={<FieldPage />} />
           <Route path="*" element={<Navigate to="/map" replace />} />
         </Routes>
+        </Suspense>
       </Shell>
     </Gate>
   )
@@ -85,7 +89,7 @@ export function Marque({ big }: { big?: boolean }) {
         <circle cx="16" cy="16" r="4.5" fill="#E4002B" />
       </svg>
       <div className="leading-tight">
-        <div className={big ? 'text-base font-bold tracking-tight' : 'text-[12.5px] font-bold tracking-tight'}>
+        <div className={big ? 'whitespace-nowrap text-base font-bold tracking-tight' : 'whitespace-nowrap text-[12.5px] font-bold tracking-tight'}>
           Indosat <span className="text-ioh-yellow">Ooredoo</span> Hutchison
         </div>
         {big && <div className="text-xs text-muted">Network Intelligence Command Center · powered by Netra</div>}

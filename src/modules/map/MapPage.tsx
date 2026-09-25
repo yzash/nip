@@ -86,12 +86,12 @@ export function MapPage() {
         {compare ? (
           <CompareView res={res} onClose={() => setCompare(false)} />
         ) : (
-          <MapView res={res} layer={layer} overlays={overlays} policy={policy} selectedSite={selected} highlightSites={highlight} fit={fit} onHover={setHover} onSiteClick={openSite} />
+          <MapView res={res} layer={layer} overlays={overlays} policy={policy} selectedSite={selected} highlightSites={highlight} fit={fit} onHover={setHover} onSiteClick={openSite} scoped={role.scope_type !== 'national'} />
         )}
         <KpiStrip res={res} />
         {!compare && <LayerPanel />}
         {!compare && <Legend res={res} />}
-        <Scrubber res={res} />
+        {!compare && <Scrubber res={res} />}
         {!compare && !selected && <RoleBrief />}
         <div className="absolute right-3 top-[84px] z-20 flex flex-col gap-2">
           <button
@@ -113,7 +113,7 @@ export function MapPage() {
       </div>
       {selected && db().siteIdx.has(selected) && (
         <aside className="relative z-30 w-[560px] shrink-0 border-l border-line bg-panel">
-          <Site360 siteId={selected} mode="drawer" onClose={closeSite} />
+          <Site360 key={selected} siteId={selected} mode="drawer" onClose={closeSite} />
         </aside>
       )}
     </div>
@@ -605,13 +605,14 @@ function HoverCard({ h, res }: { h: HoverInfo; res: LayerResult }) {
 }
 
 // ---- Compare mode -------------------------------------------------------------------
+type Cam = { center: [number, number]; zoom: number }
+
 function CompareView({ res, onClose }: { res: LayerResult; onClose: () => void }) {
   const role = useRole()
   const scope = useScope()
   const policy = usePolicy()
   const filters = useFilters()
   const layer = useApp((s) => s.layer)
-  const overlays = useApp((s) => s.overlays)
   const programs = useApp((s) => s.programs)
   const incidents = useApp((s) => s.incidents)
   const [mode, setMode] = useState<'dates' | 'provinces'>('dates')
@@ -619,78 +620,81 @@ function CompareView({ res, onClose }: { res: LayerResult; onClose: () => void }
   const [scrubB, setScrubB] = useState(layer === 'failure' ? 28 : 0)
   const [provA, setProvA] = useState('JBR')
   const [provB, setProvB] = useState('SLS')
-  const [cam, setCam] = useState<{ center: [number, number]; zoom: number } | null>(null)
-  const D = db()
+  const [cam, setCam] = useState<Cam | null>(null)
   const resA = useMemo(() => (mode === 'dates' ? computeLayer({ layer, scrub: scrubA, filters, policy, role, scope, programs, incidents }) : res), [mode, layer, scrubA, filters, policy, role, scope, programs, incidents, res])
   const resB = useMemo(() => (mode === 'dates' ? computeLayer({ layer, scrub: scrubB, filters, policy, role, scope, programs, incidents }) : res), [mode, layer, scrubB, filters, policy, role, scope, programs, incidents, res])
-  const opts = layer === 'failure' ? [-28, -14, 0, 14, 28, 42, 56] : [-30, -21, -14, -7, 0]
-  const optLabel = (d: number) => (d === 0 ? 'Today (D-1)' : d < 0 ? `D${d}` : `W+${d / 7}`)
-  const summary = (r: LayerResult, prov?: string) => {
-    let n = 0
-    let red = 0
-    let amber = 0
-    for (let i = 0; i < D.sites.length; i++) {
-      if (!r.visible[i]) continue
-      if (prov && D.sites[i].province_id !== prov) continue
-      n++
-      if (r.status[i] === 2) red++
-      else if (r.status[i] === 1) amber++
-    }
-    return { n, red, amber }
-  }
-  const Side = ({ which }: { which: 'A' | 'B' }) => {
-    const r = which === 'A' ? resA : resB
-    const prov = mode === 'provinces' ? (which === 'A' ? provA : provB) : undefined
-    const s = summary(r, prov)
-    const fit = prov ? { key: `${which}-${prov}`, bounds: D.provById[prov].bbox } : null
-    return (
-      <div className="relative min-w-0 flex-1 border-r border-line last:border-r-0">
-        <MapView
-          res={r}
-          layer={layer}
-          overlays={overlays}
-          policy={policy}
-          compact
-          fit={fit}
-          camera={mode === 'dates' ? cam : null}
-          onCamera={mode === 'dates' ? setCam : undefined}
-        />
-        <div className="absolute left-3 top-[84px] z-20 border border-line bg-panel/95 px-3 py-2">
-          <div className="mb-1 text-2xs font-semibold uppercase tracking-wider text-ioh-yellow">Side {which}</div>
-          {mode === 'dates' ? (
-            <select value={which === 'A' ? scrubA : scrubB} onChange={(e) => (which === 'A' ? setScrubA : setScrubB)(Number(e.target.value))} className="h-7 border border-line2 bg-panel2 px-1 text-xs">
-              {opts.map((o) => (
-                <option key={o} value={o}>
-                  {optLabel(o)}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <select value={prov} onChange={(e) => (which === 'A' ? setProvA : setProvB)(e.target.value)} className="h-7 border border-line2 bg-panel2 px-1 text-xs">
-              {D.provinces.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <div className="tnum mt-1.5 text-xs text-muted">
-            {num(s.n)} sites · <span className="text-bad">{s.red} red</span> · <span className="text-warn">{s.amber} amber</span>
-          </div>
-          <div className="text-[10.5px] text-faint">{r.label}</div>
-        </div>
-      </div>
-    )
-  }
   return (
     <div className="absolute inset-0 flex">
-      <Side which="A" />
-      <Side which="B" />
-      <div className="absolute left-1/2 top-[84px] z-30 flex -translate-x-1/2 items-center gap-2 border border-line bg-panel px-2 py-1.5">
+      <CompareSide which="A" res={resA} mode={mode} scrub={scrubA} setScrub={setScrubA} prov={provA} setProv={setProvA} cam={cam} setCam={setCam} />
+      <CompareSide which="B" res={resB} mode={mode} scrub={scrubB} setScrub={setScrubB} prov={provB} setProv={setProvB} cam={cam} setCam={setCam} />
+      <div className="absolute left-1/2 top-[164px] z-30 flex -translate-x-1/2 items-center gap-2 border border-line bg-panel px-2 py-1.5">
         <Seg options={[{ id: 'dates', label: 'Two dates' }, { id: 'provinces', label: 'Two provinces' }]} value={mode} onChange={setMode} />
         <button onClick={onClose} className="flex h-7 items-center gap-1 px-2 text-xs text-muted hover:text-ink">
           <X size={13} /> Exit compare
         </button>
+      </div>
+    </div>
+  )
+}
+
+function CompareSide(p: {
+  which: 'A' | 'B'
+  res: LayerResult
+  mode: 'dates' | 'provinces'
+  scrub: number
+  setScrub: (n: number) => void
+  prov: string
+  setProv: (s: string) => void
+  cam: Cam | null
+  setCam: (c: Cam) => void
+}) {
+  const D = db()
+  const policy = usePolicy()
+  const layer = useApp((s) => s.layer)
+  const overlays = useApp((s) => s.overlays)
+  const opts = layer === 'failure' ? [-28, -14, 0, 14, 28, 42, 56] : [-30, -21, -14, -7, 0]
+  const optLabel = (d: number) => (d === 0 ? 'Today (D-1)' : d < 0 ? `D${d}` : `W+${d / 7}`)
+  const prov = p.mode === 'provinces' ? p.prov : undefined
+  const s = useMemo(() => {
+    let n = 0
+    let red = 0
+    let amber = 0
+    for (let i = 0; i < D.sites.length; i++) {
+      if (!p.res.visible[i]) continue
+      if (prov && D.sites[i].province_id !== prov) continue
+      n++
+      if (p.res.status[i] === 2) red++
+      else if (p.res.status[i] === 1) amber++
+    }
+    return { n, red, amber }
+  }, [p.res, prov, D])
+  const fit = useMemo(() => (prov ? { key: `${p.which}-${prov}`, bounds: D.provById[prov].bbox } : null), [prov, p.which, D])
+  return (
+    <div className="relative min-w-0 flex-1 border-r border-line last:border-r-0">
+      <MapView res={p.res} layer={layer} overlays={overlays} policy={policy} compact fit={fit} camera={p.mode === 'dates' ? p.cam : null} onCamera={p.mode === 'dates' ? p.setCam : undefined} />
+      <div className={clsx('absolute top-[164px] z-20 border border-line bg-panel/95 px-3 py-2', p.which === 'A' ? 'left-3' : 'right-3')}>
+        <div className="mb-1 text-2xs font-semibold uppercase tracking-wider text-ioh-yellow">Side {p.which}</div>
+        {p.mode === 'dates' ? (
+          <select value={p.scrub} onChange={(e) => p.setScrub(Number(e.target.value))} className="h-7 border border-line2 bg-panel2 px-1 text-xs">
+            {opts.map((o) => (
+              <option key={o} value={o}>
+                {optLabel(o)}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <select value={prov} onChange={(e) => p.setProv(e.target.value)} className="h-7 border border-line2 bg-panel2 px-1 text-xs">
+            {D.provinces.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <div className="tnum mt-1.5 text-xs text-muted">
+          {num(s.n)} sites · <span className="text-bad">{s.red} red</span> · <span className="text-warn">{s.amber} amber</span>
+        </div>
+        <div className="text-[10.5px] text-faint">{p.res.mode === 'predicted' ? p.res.label.replace(/\d{4}-\d{2}-\d{2}/, (m) => date(m)) : `Actual · ${date(p.res.label.slice(-10))}`}</div>
       </div>
     </div>
   )

@@ -40,7 +40,7 @@ export function Dot({ status, className }: { status: number; className?: string 
 export function Fresh({ f, asOf, className }: { f: string; asOf?: string; className?: string }) {
   const tone = f === 'live' ? 'text-ok border-ok/30' : f === 'D-5' ? 'text-warn border-warn/30' : 'text-muted border-line2'
   return (
-    <span title={asOf ? `Data as of ${asOf}` : undefined} className={clsx('inline-flex h-4 items-center border px-1 font-mono text-[9.5px] leading-none', tone, className)}>
+    <span title={asOf ? `Data as of ${asOf}` : undefined} className={clsx('inline-flex h-4 shrink-0 items-center whitespace-nowrap border px-1 font-mono text-[9.5px] leading-none', tone, className)}>
       {f}
     </span>
   )
@@ -57,8 +57,8 @@ export function Id({ children, className, onClick }: { children: ReactNode; clas
 export function Kpi({ label, value, sub, fresh, tone, className, onClick }: { label: string; value: ReactNode; sub?: ReactNode; fresh?: string; tone?: 'ok' | 'warn' | 'bad' | 'yellow'; className?: string; onClick?: () => void }) {
   const tc = tone === 'ok' ? 'text-ok' : tone === 'warn' ? 'text-warn' : tone === 'bad' ? 'text-bad' : tone === 'yellow' ? 'text-ioh-yellow' : 'text-ink'
   return (
-    <div onClick={onClick} className={clsx('min-w-0 border-line px-4 py-2.5', onClick && 'cursor-pointer hover:bg-panel2', className)}>
-      <div className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wider text-faint">
+    <div onClick={onClick} className={clsx('min-w-0 shrink-0 border-line px-4 py-2.5', onClick && 'cursor-pointer hover:bg-panel2', className)}>
+      <div className="flex items-center gap-1.5 whitespace-nowrap text-2xs font-medium uppercase tracking-wider text-faint">
         <span className="truncate">{label}</span>
         {fresh && <Fresh f={fresh} />}
       </div>

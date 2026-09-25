@@ -29,8 +29,8 @@ export function TopBar() {
     <header className="no-print flex h-14 shrink-0 items-center gap-3 border-b border-line bg-panel px-3">
       <div className="flex items-center gap-3 pr-2">
         <Marque />
-        <div className="hidden h-7 w-px bg-line xl:block" />
-        <div className="hidden leading-tight xl:block">
+        <div className="hidden h-7 w-px bg-line 2xl:block" />
+        <div className="hidden whitespace-nowrap leading-tight 2xl:block">
           <div className="text-[12.5px] font-semibold">Network Intelligence Command Center</div>
           <div className="text-[10.5px] text-faint">
             powered by <span className="font-semibold text-muted">Netra</span>
@@ -52,7 +52,7 @@ export function TopBar() {
 
 function AsOf({ now, asOf }: { now: string; asOf: string }) {
   return (
-    <div className="hidden items-center gap-2 border border-line px-2.5 py-1 lg:flex" title="Prototype clock and Netra data freshness">
+    <div className="hidden items-center gap-2 whitespace-nowrap border border-line px-2.5 py-1 lg:flex" title="Prototype clock and Netra data freshness">
       <div className="leading-tight">
         <div className="tnum text-[11.5px] font-semibold">
           {weekday(now)} {date(now)} · {time(now)}
@@ -78,9 +78,9 @@ function RoleSwitcher() {
     <div className="relative" ref={ref}>
       <button onClick={() => setOpen(!open)} className="flex h-9 items-center gap-2 border border-line2 bg-panel2 pl-1.5 pr-2 hover:border-muted">
         <span className="flex h-6 min-w-[52px] items-center justify-center bg-ioh-yellow px-1.5 font-mono text-[11px] font-bold text-canvas">{role.role_code}</span>
-        <span className="hidden text-left leading-tight md:block">
-          <span className="block text-[12px] font-semibold">{role.title}</span>
-          <span className="block text-[10.5px] text-faint">
+        <span className="hidden max-w-[240px] text-left leading-tight md:block">
+          <span className="block truncate whitespace-nowrap text-[12px] font-semibold">{role.title}</span>
+          <span className="block truncate whitespace-nowrap text-[10.5px] text-faint">
             {role.user} · {scopeLabel(role, scope)}
           </span>
         </span>
@@ -156,7 +156,7 @@ function GlobalSearch() {
     return out
   }, [q, incidents, programs])
   return (
-    <div className="relative hidden w-72 md:block 2xl:w-96" ref={ref}>
+    <div className="relative hidden w-56 md:block xl:w-72 2xl:w-96" ref={ref}>
       <Search size={14} className="absolute left-2.5 top-2.5 text-faint" />
       <input
         value={q}

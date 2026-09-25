@@ -1374,9 +1374,15 @@ def new_incident(cls, site_idx, *, source, status, title=None, prob=None, week=N
     urgency = clamp(1.6 - 0.1 * wk, 0.8, 1.6)
     dname = DISTS[s0["district_id"]]["name"]
     title = title or f"{CLASS_LABEL[cls]} — {len(site_idx)} site{'s' if len(site_idx) > 1 else ''} in {dname}"
-    det = detected_days if detected_days is not None else float(rng.uniform(0.2, 9))
-    detected_at = NOW - dt.timedelta(days=det)
     sla_h = {"transport": 24, "availability": 8, "power": 48, "capacity": 72, "cnx": 48, "complaints": 48}.get(cls, 72)
+    if detected_days is not None:
+        det = detected_days
+    elif status in ("Detected", "Enriched", "Pending_approval"):
+        # decision still open: mostly inside the SLA window, about one in ten overdue
+        det = float(rng.uniform(1.05, 1.5) if rng.random() < 0.1 else rng.uniform(0.04, 0.85)) * sla_h / 24
+    else:
+        det = float(rng.uniform(0.2, 9))
+    detected_at = NOW - dt.timedelta(days=det)
     inc = {
         "incident_id": iid, "title": title, "class": cls, "source": source,
         "site_ids": [sites[i]["site_id"] for i in site_idx], "province_id": s0["province_id"],
@@ -1500,26 +1506,24 @@ for i in worst(avail_7, lambda s: True, 18):
     avail[i, -3:] = np.minimum(avail[i, -3:], rng.uniform(96.2, 98.7, 3))
     used.add(i)
     new_incident("availability", [i], source="alarm",
-                 status=pick(["Enriched", "Pending_approval", "Approved", "Detected"], [0.35, 0.3, 0.2, 0.15]),
-                 detected_days=float(rng.uniform(0.1, 3)))
+                 status=pick(["Enriched", "Pending_approval", "Approved", "Detected"], [0.35, 0.3, 0.2, 0.15]))
 bad_7 = bad[:, -7:].mean(1)
 for i in worst(bad_7, lambda s: s["urban"], 8, reverse=True):
     bad[i, -10:] += rng.uniform(4, 7)
     used.add(i)
-    new_incident("bad_session", [i], source="alarm", status=pick(["Enriched", "Pending_approval", "Deferred"]),
-                 detected_days=float(rng.uniform(0.5, 5)))
+    new_incident("bad_session", [i], source="alarm", status=pick(["Enriched", "Pending_approval", "Deferred"]))
 en_idx = sorted(range(N), key=lambda i: -sites[i]["energy"]["energy_opex_idr_month"])
 for i in [j for j in en_idx if j not in used][:5]:
     used.add(i)
     new_incident("energy", [i], source="prediction", status=pick(["Enriched", "Pending_approval"]), prob=rng.uniform(0.7, 0.9),
-                 week=0, exposure=0, detected_days=float(rng.uniform(1, 8)),
+                 week=0, exposure=0,
                  extra={"opex_saving_idr_month": int(sites[i]["energy"]["energy_opex_idr_month"] * 0.38)})
 for pop in ("CDN-BTM-01", "CDN-SMG-01"):
     c = next(x for x in cdn_peers if x["pop_id"] == pop)
     city_sites = [i for i in range(N) if sites[i]["province_id"] == ("KPR" if pop == "CDN-BTM-01" else "JTG")][:1]
     new_incident("cdn", city_sites, source="alarm", status="Enriched",
                  title=f"CDN peering degradation — {c['partner']} {c['city']} (cache hit {c['cache_hit_pct']}%)",
-                 exposure=c["egress_cost_idr_month"] * 0.38, detected_days=float(rng.uniform(0.5, 2)),
+                 exposure=c["egress_cost_idr_month"] * 0.38,
                  extra={"pop_id": pop})
 # CX complaint clusters
 for prov, dname in (("SMU", "Kota Medan"), ("JBR", "Kota Depok"), ("KTM", "Kota Samarinda"), ("BAL", "Badung"),
@@ -1529,8 +1533,7 @@ for prov, dname in (("SMU", "Kota Medan"), ("JBR", "Kota Depok"), ("KTM", "Kota 
     for i in ds:
         used.add(i)
     new_incident("complaints", ds, source="cx", status=pick(["Enriched", "Pending_approval", "Detected"]),
-                 title=f"Complaint cluster: {pick(COMPLAINTS[:5])} — {dname}",
-                 detected_days=float(rng.uniform(0.5, 4)))
+                 title=f"Complaint cluster: {pick(COMPLAINTS[:5])} — {dname}")
 
 # Historical: closed, rejected, validating
 for k in range(12):
@@ -1563,8 +1566,7 @@ sl_sites = [i for i in range(N) if sites[i]["region"] == REG and i not in used]
 while len(reg_open) < target_open:
     i = sl_sites.pop()
     used.add(i)
-    reg_open.append(new_incident("availability", [i], source="alarm", status="Enriched",
-                                 detected_days=float(rng.uniform(0.2, 2))))
+    reg_open.append(new_incident("availability", [i], source="alarm", status="Enriched"))
 # Two escalation candidates and two false-positive candidates among them.
 cand = [x for x in reg_open if not x.get("story") and x["status"] not in ("In_program",)]
 for x in cand[:2]:
