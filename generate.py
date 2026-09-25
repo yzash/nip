@@ -918,8 +918,8 @@ for p in programs:
     pid = p["program_id"]
     if p["vendor_sla_risk"]:
         v = next(x for x in VENDORS if x["vendor_id"] == p["vendor_id"])
-        p["blockers"].append({"type": "vendor_sla", "text": f"{v['short']} installation crews at "
-                              f"{int(rng.uniform(112, 131))}% of committed capacity; SLA clock breaches in "
+        p["blockers"].append({"type": "vendor_sla", "text": f"{v['short']} installation crews short in region "
+                              f"({int(rng.uniform(2, 4))} of {int(rng.uniform(5, 7))} teams mobilised); SLA clock breaches in "
                               f"{int(rng.uniform(4, 9))} days", "since": iso(TODAY - days(int(rng.integers(5, 15))))})
     if pid in ("PRG-2614", "PRG-2620"):
         tc = "Mitratel" if pid == "PRG-2614" else "Protelindo"

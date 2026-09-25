@@ -31,7 +31,9 @@ export function interventionFromOption(name: string): string {
   if (n.includes('solar')) return 'solar'
   if (n.includes('microwave')) return 'transport'
   if (n.includes('fibre')) return 'fibre'
-  if (n.includes('modernisation')) return 'ran_swap'
+  if (n.includes('modernisation') || n.includes('unit swap')) return 'ran_swap'
+  if (n.includes('genset') || n.includes('generator')) return 'power'
+  if (n.includes('peering port')) return 'transport'
   if (n.includes('hardening')) return 'flood'
   return 'refarm'
 }
