@@ -44,6 +44,10 @@ export function LeftRail() {
           </NavLink>
         ))}
       </div>
+      <NavLink to="/phase1" title="Phase 1 · Predictive Planner" className="flex h-11 items-center gap-3 border-t border-line px-[22px] text-ioh-yellow hover:bg-panel2">
+        <span className="flex h-[19px] w-[19px] shrink-0 items-center justify-center border border-ioh-yellow font-mono text-[9px] font-bold">P1</span>
+        {expanded && <span className="truncate text-sm font-semibold">Phase 1 Planner</span>}
+      </NavLink>
       <button onClick={() => setRail(!expanded)} className="flex h-10 items-center justify-center border-t border-line text-faint hover:text-ink" aria-label="Toggle navigation">
         {expanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
       </button>

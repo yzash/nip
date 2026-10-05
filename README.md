@@ -19,6 +19,14 @@ python3 generate.py    # rewrites /data/*.json and prints the story check
 npm run build          # static site in dist/ (data copied to dist/data)
 ```
 
+## Phase 1 · Predictive Planner (`/phase1`)
+
+After the first stakeholder session IOH prioritised the Predictive Planner for Phase 1. It has its own URL family and shell at **`/phase1`**; the full NICC prototype stays at `/map` and the other module routes.
+
+- **Workflow** (all five failure classes): Forecast → Classify (CapEx / non-CapEx) → Plans (BOQ, stock, vendor, PO draft, critical path) → Approvals (IOH delegation of authority) → Hand-off of BOQ and PO drafts to ERP, PMO, WMS, vendor portal and tower companies.
+- **How it works**: agent architecture (21 Planner agents with data contracts, schedules and APIs), data needed (22 sources, Netra status, field-level schemas, feature catalog, gaps), model cards per class, and the 16-week go-live plan.
+- Content lives in `src/phase1/content/` (agents, sources, go-live) so it can be edited with IOH without touching screens; per-site explanations, prediction history and back-test curves are generated into `data/p1_planner.json` by `generate.py` (separate random stream, so the full prototype's data is unchanged).
+
 ## What is in the box
 
 | Path | What it is |

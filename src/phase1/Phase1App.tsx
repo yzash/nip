@@ -11,6 +11,7 @@ import { roleDef, useApp, useRole } from '@/store/app'
 import { PHASE1_ROLES } from './model'
 import { useP1Store } from './store'
 import { OverviewPage } from './pages/Overview'
+import { P1GuideButton } from './Guide'
 
 const ForecastPage = lazy(() => import('./pages/Forecast').then((m) => ({ default: m.ForecastPage })))
 const SiteExplainPage = lazy(() => import('./pages/SiteExplain').then((m) => ({ default: m.SiteExplainPage })))
@@ -155,6 +156,7 @@ function P1TopBar() {
             Forecast run {date(D.meta.now)} 05:00 · data <span className="font-mono">D-1</span>
           </div>
         </div>
+        <P1GuideButton />
         <button
           title="Reset Phase 1 demo state"
           onClick={() => {
