@@ -391,6 +391,7 @@ export const SOURCES: DataSource[] = [
     qualityNotes: 'Join once per quarter; elevation fills the site-master gap.',
     criticality: 'important',
     classes: ['environmental'],
+    gap: 'One-off geospatial join of InaRISK flood and landslide classes and DEM elevation to every site; refresh quarterly.',
     fields: [{ name: 'site_id, flood_class, landslide_class, elevation_m, dist_water_m', type: 'record', description: 'Per-site hazard attributes' }],
   },
   {

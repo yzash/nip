@@ -48,7 +48,9 @@ export interface P1Model {
   calibration: { bin: string; predicted: number; observed: number; n: number }[]
   lift_by_decile: number[]
   precision_monthly: { month: string; precision: number }[]
-  confusion_at_threshold: { threshold: number; tp: number; fp: number; fn: number; tn: number }
+  confusion_at_threshold: { threshold: number; tp: number; fp: number; fn: number; tn: number; population?: string }
+  precision_metric?: string
+  alert_share?: number
   retrain: string
   owner: string
 }

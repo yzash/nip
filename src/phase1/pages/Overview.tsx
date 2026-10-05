@@ -155,7 +155,7 @@ export function OverviewPage() {
               </tbody>
             </table>
             <div className="border-t border-line px-4 py-2 text-[11px] text-faint">
-              All five classes are in the product from day one. A class drives approvals only after it clears 70% precision in the top decile on a 24-month back-test; below that it is advisory, and environmental scores in shadow until the BMKG feed lands.
+              All five classes are in the product from day one. A class drives approvals only after it clears 70% precision at the 60% alert threshold on a 24-month back-test; below that it is advisory, and environmental scores in shadow until the BMKG feed lands.
             </div>
           </section>
 
@@ -200,7 +200,7 @@ export function OverviewPage() {
               {SOURCES.length} sources · {sourcesReady} already on Netra
             </div>
             <div className="mt-1 text-xs text-muted">
-              {SOURCES.filter((s) => s.status === 'partial').length} partial, {SOURCES.filter((s) => s.status === 'not_on_netra').length} to onboard. <span className="text-warn">{blockingGaps} blocking gaps</span> before go-live (RMS, TNMS, BMKG, site master quality, ticket labels, ERP and WMS).
+              {SOURCES.filter((s) => s.status === 'partial').length} partial, {SOURCES.filter((s) => s.status === 'not_on_netra').length} to onboard. <span className="text-warn">{blockingGaps} blocking gaps</span> before go-live (site master quality, power telemetry, transport NMS, weather, ERP and warehouse).
             </div>
             <div className="mt-3 flex h-2 w-full">
               <div className="bg-ok" style={{ width: `${(sourcesReady / SOURCES.length) * 100}%` }} />

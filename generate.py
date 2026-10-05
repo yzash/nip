@@ -2297,7 +2297,19 @@ for sc in json.loads(json.dumps(model_scorecard)):
         noise = rng1.normal(0, 0.025 if cls in ("capacity", "power") else 0.05 if cls != "environmental" else 0.09) * min(1.0, 0.25 + pred * 1.8)
         calib.append({"bin": f"{b * 10}-{b * 10 + 10}%", "predicted": r2(pred, 3), "observed": r2(clamp(pred + noise - (0.04 if cls == "environmental" and pred > 0.5 else 0), 0, 1), 3),
                       "n": int(4000 * math.exp(-b * 0.55) + 20)})
-    lift = [r2(max(0.2, (pt / br) * math.exp(-d * 0.62)), 2) for d in range(10)]
+    # Lift by risk decile: the top decile captures most positives; deciles average to 1.0.
+    capture1 = clamp(sc["recall"] + 0.12, 0.4, 0.85)
+    tail = [math.exp(-k * 0.55) for k in range(9)]
+    tail = [t / sum(tail) * (1 - capture1) for t in tail]
+    lift = [r2(capture1 / 0.1, 2)] + [r2(t / 0.1, 2) for t in tail]
+    # Back-test confusion at the 60% alert threshold over site-windows (60k sites x 26 fortnightly windows)
+    n_win = 60000 * 26
+    pos = br * n_win
+    tp = sc["recall"] * pos
+    fp = tp * (1 - pt) / pt
+    fn = pos - tp
+    tn = n_win - tp - fp - fn
+    fpr = fp / (fp + tn)
     hist = [r2(clamp(pt + rng1.normal(0, 0.02) - (0.03 if m < 3 else 0), 0.3, 0.95), 3) for m in range(12)]
     p1_models.append({**sc, "base_rate": br, "algorithm": "Gradient-boosted trees (LightGBM), one model per class",
                       "label": {"capacity": "Busy-hour PRB ≥ 90% on ≥ 3 days in a week, or DL P10 throughput < 2 Mbps",
@@ -2309,7 +2321,10 @@ for sc in json.loads(json.dumps(model_scorecard)):
                       "features": len(P1_FEATURES[cls]), "versions": [{"version": v, "date": iso(TODAY - days(30 * (len(VERSIONS[cls]) - n) + 5)), "note": ["Back-test baseline", "Added PRB slope and device mix" if cls == "capacity" else "Feature refresh", "Calibration fix (isotonic)"][min(n, 2)]} for n, v in enumerate(VERSIONS[cls])],
                       "current_version": VERSIONS[cls][-1], "pr_curve": pr_curve(pt, sc["recall"]), "calibration": calib, "lift_by_decile": lift,
                       "precision_monthly": [{"month": (TODAY.replace(day=1) - days(30 * (11 - m))).strftime("%Y-%m"), "precision": hist[m]} for m in range(12)],
-                      "confusion_at_threshold": {"threshold": POLICY["red_min_probability"], "tp": int(400 * pt), "fp": int(400 * (1 - pt)), "fn": int(400 * pt * (1 / sc["recall"] - 1)), "tn": 18000},
+                      "confusion_at_threshold": {"threshold": POLICY["red_min_probability"], "tp": int(tp), "fp": int(fp), "fn": int(fn), "tn": int(tn), "population": "60,000 sites × 26 fortnightly windows (24-month back-test)"},
+                      "false_positive_rate": r2(fpr, 4),
+                      "precision_metric": "Precision at the alert threshold (p ≥ 60%): share of sites flagged red that failed inside the horizon",
+                      "alert_share": r2((tp + fp) / n_win, 4),
                       "retrain": "Monthly, champion/challenger on the last 3 months", "owner": "IOH Network Operations · DevX delivery"})
 
 p1_out = {

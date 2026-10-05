@@ -21,7 +21,7 @@ export interface Workstream {
 export const WORKSTREAMS: Workstream[] = [
   { id: 'WS1', name: 'Data onboarding and quality', lead: 'Netra data engineering', start: 1, end: 8, deliverables: ['OSS PM backfill to 24 months', 'Alarm taxonomy mapping', 'RMS, TNMS, BMKG, InaRISK onboarding', 'Site master quality sprint', 'Ticket root-cause labelling'] },
   { id: 'WS2', name: 'Features and models', lead: 'DevX data science · Netra Model Ops', start: 3, end: 11, deliverables: ['Feature Builder (40 features)', '5 class models with back-test', 'Calibration and explanations', 'Precision gate review per class'] },
-  { id: 'WS3', name: 'Planner agents', lead: 'DevX engineering', start: 5, end: 12, deliverables: ['Forecast Orchestrator, Ladder, Match, Priority', 'BOQ, Warehouse, Procurement, Vendor, Tower co agents (draft only)', 'Approval Routing on IOH DoA'] },
+  { id: 'WS3', name: 'Planner agents', lead: 'DevX engineering', start: 5, end: 12, deliverables: ['Built in parallel against the data contracts signed in week 2 (53 agent-weeks across 3 squads)', 'Forecast Orchestrator, Ladder, Match, Priority', 'BOQ, Warehouse, Procurement, Vendor, Tower co agents (draft only)', 'Approval Routing on IOH DoA'] },
   { id: 'WS4', name: 'Planner experience', lead: 'DevX product and design', start: 4, end: 13, deliverables: ['Forecast board, explainer, classification', 'Plan builder and approvals', 'Hand-off and audit'] },
   { id: 'WS5', name: 'Integrations', lead: 'IOH IT · DevX', start: 6, end: 14, deliverables: ['ERP read (price book, contracts, POs)', 'ERP PO-draft interface', 'WMS stock and reservations', 'Vendor portal read', 'SSO and role mapping'] },
   { id: 'WS6', name: 'UAT, training and cutover', lead: 'IOH Network Planning · DevX', start: 12, end: 16, deliverables: ['Parallel run against the current Smart CapEx process (4 weeks)', 'Planner and approver training', 'Go-live and hypercare'] },
@@ -40,7 +40,7 @@ export type GateStatus = 'drives_approvals' | 'advisory' | 'shadow'
 
 // Each class goes live in the product; whether it drives approvals depends on its precision gate.
 export const CLASS_GATES: { cls: string; label: string; gateAtGoLive: GateStatus; today: string; toClear: string; blockingSources: string[] }[] = [
-  { cls: 'capacity', label: 'Capacity', gateAtGoLive: 'drives_approvals', today: 'Back-test precision 78% (top decile): clears the 70% gate', toClear: 'Keep: monthly recalibration', blockingSources: ['SRC-OSS-PM', 'SRC-CM'] },
+  { cls: 'capacity', label: 'Capacity', gateAtGoLive: 'drives_approvals', today: 'Back-test precision 78% at the 60% alert threshold: clears the 70% gate', toClear: 'Keep: monthly recalibration', blockingSources: ['SRC-OSS-PM', 'SRC-CM'] },
   { cls: 'power', label: 'Power', gateAtGoLive: 'drives_approvals', today: '74%: clears the gate on alarm proxies', toClear: 'RMS telemetry raises recall from 58% towards 70%', blockingSources: ['SRC-RMS', 'SRC-FM'] },
   { cls: 'transport', label: 'Transport', gateAtGoLive: 'advisory', today: '69%: 1 pt below the gate', toClear: 'Access-link utilisation, MW fade events and topology from TNMS (WS1, week 8)', blockingSources: ['SRC-TNMS'] },
   { cls: 'ran_hardware', label: 'RAN hardware', gateAtGoLive: 'advisory', today: '66%: below the gate', toClear: 'Unit install dates (site master sprint) and VSWR alarm normalisation', blockingSources: ['SRC-SITE', 'SRC-FM'] },
@@ -48,7 +48,7 @@ export const CLASS_GATES: { cls: string; label: string; gateAtGoLive: GateStatus
 ]
 
 export const EXIT_CRITERIA = [
-  { id: 'EC1', text: 'Back-test precision ≥ 70% at the top decile for every class that drives approvals', metric: 'Model scorecard' },
+  { id: 'EC1', text: 'Back-test precision ≥ 70% at the 60% alert threshold for every class that drives approvals', metric: 'Model scorecard' },
   { id: 'EC2', text: 'Forecast available by 06:00 WIB on ≥ 98% of days in the last 4 weeks of UAT', metric: 'Run log' },
   { id: 'EC3', text: 'Feature completeness ≥ 98% of sites (missing shown grey, never guessed)', metric: 'Feature Builder report' },
   { id: 'EC4', text: 'Prediction-to-approved plan ≤ 5 working days for the UAT clusters', metric: 'Approval log' },
@@ -136,6 +136,7 @@ export const RISKS = [
 ]
 
 export const OPEN_QUESTIONS = [
+  'The PRD gate says “precision at the top decile”. With failure base rates of 2–4% the top 10% of sites can be at most 20–35% precise, so the prototype measures precision at the 60% alert threshold (about 2–3% of site-windows). Does the Netra team agree with this definition?',
   'Which ERP interface can accept PO drafts in Phase 1 (BAPI, IDoc or file drop), and who owns it?',
   'Is the 8-week horizon right for every class, or should capacity use 12 weeks and environmental 4?',
   'What are the real approval thresholds by IDR and intervention class (DoA matrix)?',
