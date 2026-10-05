@@ -74,6 +74,10 @@ function mkPlan(c: Cluster, n: number, status: P1Plan['status'], daysAgo: number
     history.push({ ts: `${addDays(today, -daysAgo + 1)}T14:30:00+07:00`, who: 'Procurement Agent', role: 'system', what: 'Hand-off acknowledged by ERP, PMO and WMS' })
   }
   if (status !== 'draft') p.submitted = history[1].ts
+  if (status === 'approved' || status === 'handed_off') {
+    p.decided = history[2].ts
+    p.decided_by = history[2].who
+  }
   return p
 }
 
@@ -94,7 +98,7 @@ export const useP1Store = create<P1State>()((set, get) => ({
     const seeds: [Cluster | undefined, P1Plan['status'], number][] = [
       [cj, 'handed_off', 9],
       [pick('ran_hardware', (c) => c.coverage.verdict === 'not_covered' && c.site_ids.length >= 2), 'approved', 2],
-      [pick('power', (c) => c.coverage.verdict === 'not_covered' && c.site_ids.length >= 2), 'pending_approval', 1],
+      [pick('power', (c) => c.coverage.verdict === 'not_covered') ?? pick('transport', (c) => c.coverage.verdict === 'not_covered'), 'pending_approval', 1],
       [pick('environmental', (c) => c.coverage.verdict === 'not_covered'), 'draft', 0],
     ]
     let n = 1
