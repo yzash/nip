@@ -13,6 +13,7 @@ const PlannerPage = lazy(() => import('@/modules/planner/PlannerPage').then((m) 
 const ProgramsPage = lazy(() => import('@/modules/programs/ProgramsPage').then((m) => ({ default: m.ProgramsPage })))
 const ValuePage = lazy(() => import('@/modules/value/ValuePage').then((m) => ({ default: m.ValuePage })))
 const AgentsPage = lazy(() => import('@/modules/agents/AgentsPage').then((m) => ({ default: m.AgentsPage })))
+const Phase1App = lazy(() => import('@/phase1/Phase1App').then((m) => ({ default: m.Phase1App })))
 const FieldPage = lazy(() => import('@/modules/field/FieldPage').then((m) => ({ default: m.FieldPage })))
 
 export default function App() {
@@ -58,8 +59,25 @@ export default function App() {
 
   return (
     <Gate>
-      <Shell>
-        <Suspense fallback={<div className="p-6 text-sm text-faint">Loading module…</div>}>
+      <Routes>
+        <Route
+          path="/phase1/*"
+          element={
+            <Suspense fallback={<div className="p-6 text-sm text-faint">Loading Predictive Planner…</div>}>
+              <Phase1App />
+            </Suspense>
+          }
+        />
+        <Route path="*" element={<FullPrototype />} />
+      </Routes>
+    </Gate>
+  )
+}
+
+function FullPrototype() {
+  return (
+    <Shell>
+      <Suspense fallback={<div className="p-6 text-sm text-faint">Loading module…</div>}>
         <Routes>
           <Route path="/" element={<Navigate to="/map" replace />} />
           <Route path="/map" element={<MapPage />} />
@@ -74,9 +92,8 @@ export default function App() {
           <Route path="/field" element={<FieldPage />} />
           <Route path="*" element={<Navigate to="/map" replace />} />
         </Routes>
-        </Suspense>
-      </Shell>
-    </Gate>
+      </Suspense>
+    </Shell>
   )
 }
 

@@ -2125,6 +2125,203 @@ for name, obj in OUT.items():
     (DATA / f"{name}.json").write_text(json.dumps(obj, separators=(",", ":"), ensure_ascii=False))
 
 # ----------------------------------------------------------------------------------------
+# 15b. Phase 1 Predictive Planner data (separate random stream: the files above stay identical)
+# ----------------------------------------------------------------------------------------
+rng1 = np.random.default_rng(SEED + 1)
+
+# Feature catalog per failure class: id, label, unit, source id, window, definition, direction (+1: higher = riskier), importance
+P1_FEATURES = {
+    "capacity": [
+        ("prb_bh_p95_28d", "DL PRB utilisation, busy-hour P95", "%", "SRC-OSS-PM", "28 d", "95th percentile of busy-hour downlink PRB utilisation across the site's cells", 1, 0.24),
+        ("prb_slope_8w", "PRB trend", "pts/wk", "SRC-OSS-PM", "8 wk", "Least-squares slope of weekly busy-hour PRB utilisation", 1, 0.21),
+        ("traffic_growth_mom", "Data traffic growth", "% MoM", "SRC-OSS-PM", "3 mo", "Month-on-month growth of DL+UL payload (GB)", 1, 0.14),
+        ("rrc_users_bh", "RRC-connected users, busy hour", "users", "SRC-OSS-PM", "28 d", "Mean busy-hour RRC-connected users per site", 1, 0.1),
+        ("dl_tput_bh_p10", "DL user throughput, busy-hour P10", "Mbps", "SRC-OSS-PM", "28 d", "10th percentile of busy-hour DL user throughput", -1, 0.09),
+        ("device_5g_share", "5G / LTE-A capable device share", "%", "SRC-DEVICE", "30 d", "Share of active devices (TAC) supporting 5G NR or LTE-A carrier aggregation", 1, 0.07),
+        ("spectrum_mhz", "Deployed spectrum per sector", "MHz", "SRC-CM", "snapshot", "Sum of carrier bandwidth per sector from configuration management", -1, 0.08),
+        ("neighbour_headroom", "Neighbour offload headroom", "%", "SRC-OSS-PM", "28 d", "Mean PRB headroom (100 − PRB) on first-tier neighbours", -1, 0.07),
+    ],
+    "power": [
+        ("battery_health_pct", "Battery state of health", "%", "SRC-RMS", "snapshot", "Battery management system state of health (capacity vs nameplate)", -1, 0.23),
+        ("discharge_depth_30d", "Mean depth of discharge", "%", "SRC-RMS", "30 d", "Average depth of discharge across mains-failure events", 1, 0.17),
+        ("grid_outages_30d", "Mains failures", "count", "SRC-PLN", "30 d", "Mains-failure events from PLN feed and site alarms", 1, 0.15),
+        ("genset_hours_day", "Genset run hours", "h/day", "SRC-FUEL", "30 d", "Mean daily generator run hours from fuel logs / RMS", 1, 0.12),
+        ("rectifier_alarms_30d", "Rectifier alarms", "count", "SRC-FM", "30 d", "Rectifier module fail / high-temperature alarms", 1, 0.11),
+        ("battery_age_months", "Battery bank age", "months", "SRC-SITE", "snapshot", "Months since battery installation from site inventory", 1, 0.09),
+        ("fuel_min_pct_7d", "Minimum fuel level", "%", "SRC-FUEL", "7 d", "Lowest tank level recorded in the last 7 days (genset sites)", -1, 0.07),
+        ("cabinet_temp_max", "Cabinet temperature, max", "°C", "SRC-RMS", "14 d", "Maximum cabinet temperature (battery life halves per +10 °C)", 1, 0.06),
+    ],
+    "transport": [
+        ("link_util_p95", "Backhaul utilisation, P95", "%", "SRC-TNMS", "14 d", "95th percentile utilisation of the site's first-hop backhaul link", 1, 0.24),
+        ("link_util_slope", "Backhaul utilisation trend", "pts/wk", "SRC-TNMS", "8 wk", "Weekly slope of P95 link utilisation", 1, 0.15),
+        ("mw_fade_events_14d", "Microwave fade events", "count", "SRC-TNMS", "14 d", "RSL drops below fade margin threshold", 1, 0.16),
+        ("protection", "Path protection", "0/1", "SRC-TNMS", "snapshot", "1 if the link has 1+1 or ring protection", -1, 0.12),
+        ("dependent_sites", "Dependent sites downstream", "sites", "SRC-TNMS", "snapshot", "Sites whose traffic transits this link", 1, 0.1),
+        ("fibre_cuts_12m", "Fibre cut history", "count", "SRC-ITSM", "12 mo", "Fibre-cut tickets on the route in 12 months", 1, 0.08),
+        ("rain_7d_mm", "Rain forecast, next 7 days", "mm", "SRC-BMKG", "7 d ahead", "BMKG accumulated rainfall forecast at the hop midpoint", 1, 0.09),
+        ("hop_count", "Hops to core", "hops", "SRC-TNMS", "snapshot", "Number of transport hops to the aggregation core", 1, 0.06),
+    ],
+    "ran_hardware": [
+        ("unit_age_years", "Radio / baseband unit age", "years", "SRC-SITE", "snapshot", "Years since the oldest active RRU/BBU was installed", 1, 0.22),
+        ("vswr_alarms_30d", "VSWR / RF path alarms", "count", "SRC-FM", "30 d", "Recurring VSWR and RF-path alarms", 1, 0.19),
+        ("board_temp_max", "Board temperature, max", "°C", "SRC-OSS-PM", "14 d", "Maximum baseband board temperature", 1, 0.13),
+        ("mtbf_ratio", "Age vs vendor MTBF", "ratio", "SRC-VENDOR", "snapshot", "Unit age divided by vendor-published MTBF", 1, 0.14),
+        ("resets_30d", "Unplanned resets", "count", "SRC-FM", "30 d", "Unplanned cell / board resets", 1, 0.12),
+        ("alarm_recurrence", "Alarm recurrence index", "index", "SRC-FM", "90 d", "Share of days with a repeat hardware alarm", 1, 0.09),
+        ("swaps_24m", "Hardware swaps", "count", "SRC-ITSM", "24 mo", "Hardware replacement tickets on the site", 1, 0.06),
+        ("firmware_lag", "Firmware versions behind", "versions", "SRC-CM", "snapshot", "Software releases behind the vendor baseline", 1, 0.05),
+    ],
+    "environmental": [
+        ("rain_outlook_mm", "Rain outlook, next dasarian", "mm", "SRC-BMKG", "10 d ahead", "BMKG 10-day (dasarian) rainfall outlook for the site grid cell", 1, 0.24),
+        ("elevation_m", "Site elevation", "m ASL", "SRC-SITE", "snapshot", "Elevation above sea level from site master / DEM", -1, 0.17),
+        ("dist_water_m", "Distance to river or coast", "m", "SRC-INARISK", "snapshot", "Distance to nearest river bank or shoreline", -1, 0.15),
+        ("flood_events_5y", "Flood events within 2 km", "count", "SRC-INARISK", "5 yr", "BNPB recorded flood events within 2 km", 1, 0.14),
+        ("landslide_idx", "Landslide hazard index", "0–1", "SRC-INARISK", "snapshot", "InaRISK landslide hazard class, normalised", 1, 0.1),
+        ("plinth_cm", "Cabinet plinth height", "cm", "SRC-SITE", "snapshot", "Height of equipment plinth above grade", -1, 0.09),
+        ("coastal", "Coastal exposure", "0/1", "SRC-SITE", "snapshot", "1 if within 1 km of the coast", 1, 0.06),
+        ("soil_saturation", "Soil saturation", "0–1", "SRC-BMKG", "7 d", "Antecedent soil moisture index", 1, 0.05),
+    ],
+}
+BASE_RATE = {"capacity": 0.035, "power": 0.03, "transport": 0.025, "ran_hardware": 0.03, "environmental": 0.02}
+
+link_by_site = {}
+for L in links:
+    link_by_site.setdefault(L["to_site"], L)
+
+
+def p1_values(i, cls):
+    s = sites[i]
+    risk = float(fc_prob[i, -1])
+    hot = risk >= POLICY["red_min_probability"]
+    j = lambda lo, hi: float(rng1.uniform(lo, hi))
+    if cls == "capacity":
+        pr = float(prb[i, -28:].max())
+        sl = float(prb_growth[i] * 7)
+        return {"prb_bh_p95_28d": min(99.0, pr + j(1, 4)), "prb_slope_8w": max(-0.5, sl), "traffic_growth_mom": clamp(sl * 9 + j(2, 6), -3, 32),
+                "rrc_users_bh": s["subscribers"] * 0.075 * (pr / 70), "dl_tput_bh_p10": max(1.2, float(thr[i, -28:].min()) * 0.4),
+                "device_5g_share": j(26, 41) if "5G" in s["technologies"] else j(11, 26),
+                "spectrum_mhz": sum({"L900": 10, "L1800": 20, "L2100": 15, "L2300": 20, "N1800": 20, "N2100": 40}[c["band"]] for c in D_cells(s)) / max(1, len(D_cells(s))),
+                "neighbour_headroom": j(8, 22) if hot else j(18, 55)}
+    if cls == "power":
+        e = s["energy"]
+        bh = e["battery_health_pct"] - (j(8, 18) if hot else 0)
+        return {"battery_health_pct": max(35.0, bh), "discharge_depth_30d": clamp(100 - bh * 0.75 + j(-4, 6), 15, 95),
+                "grid_outages_30d": e["grid_outages_30d"] + (int(j(4, 10)) if hot else 0), "genset_hours_day": e["genset_hours_day"],
+                "rectifier_alarms_30d": e["rectifier_alarms_30d"] + (int(j(5, 12)) if hot else 0), "battery_age_months": max(6.0, age_years[i] * 12 * j(0.25, 0.6)),
+                "fuel_min_pct_7d": j(12, 30) if e["genset_hours_day"] > 4 else j(45, 90), "cabinet_temp_max": j(41, 49) if hot else j(33, 42)}
+    if cls == "transport":
+        L = link_by_site.get(s["site_id"])
+        u = L["util_pct"] if L else (j(86, 95) if hot else j(35, 78))
+        return {"link_util_p95": min(99.0, u + j(1, 3)), "link_util_slope": j(0.8, 2.2) if hot else j(-0.2, 0.9), "mw_fade_events_14d": int(j(12, 30)) if (hot and s["backhaul"] == "microwave") else int(j(0, 8)),
+                "protection": 0.0 if hot else float(rng1.random() < 0.4), "dependent_sites": float(L["dependent_sites"]) if L else j(1, 4),
+                "fibre_cuts_12m": float(int(j(0, 4))), "rain_7d_mm": j(70, 160) if hot else j(10, 90), "hop_count": float(int(j(2, 6)))}
+    if cls == "ran_hardware":
+        a = float(age_years[i])
+        return {"unit_age_years": a, "vswr_alarms_30d": float(int(j(4, 11))) if hot else float(int(j(0, 3))), "board_temp_max": j(43, 51) if hot else j(34, 44),
+                "mtbf_ratio": a / 9, "resets_30d": float(int(j(3, 9))) if hot else float(int(j(0, 3))), "alarm_recurrence": j(0.3, 0.7) if hot else j(0.0, 0.25),
+                "swaps_24m": float(int(j(1, 4))) if hot else float(int(j(0, 2))), "firmware_lag": float(int(j(1, 4)))}
+    return {"rain_outlook_mm": j(180, 320) if hot else j(40, 190), "elevation_m": float(s["elevation_m"]), "dist_water_m": j(60, 400) if hot else j(300, 4000),
+            "flood_events_5y": float(int(j(2, 6))) if hot else float(int(j(0, 2))), "landslide_idx": j(0.3, 0.8) if hot else j(0.0, 0.4),
+            "plinth_cm": j(15, 35) if hot else j(30, 80), "coastal": float(s["coastal"]), "soil_saturation": j(0.6, 0.95) if hot else j(0.2, 0.7)}
+
+
+_cells_by_site = defaultdict(list)
+for c in cells:
+    _cells_by_site[c["site_id"]].append(c)
+
+
+def D_cells(s):
+    return _cells_by_site[s["site_id"]]
+
+
+cand = [i for i in range(N) if fc_prob[i, -1] >= 0.3]
+# population reference per class from a sample of green sites
+pop_ref = {}
+for cls, feats in P1_FEATURES.items():
+    sample = [i for i in range(N) if fc_class[i] == cls and fc_prob[i, -1] < 0.3][:300]
+    vals = [p1_values(i, cls) for i in sample]
+    pop_ref[cls] = {f[0]: {"p50": r2(np.median([v[f[0]] for v in vals]), 2), "p90": r2(np.percentile([v[f[0]] for v in vals], 90 if f[6] > 0 else 10), 2),
+                           "mean": float(np.mean([v[f[0]] for v in vals])), "sd": float(np.std([v[f[0]] for v in vals]) or 1)} for f in feats}
+
+p1_sites = []
+for i in cand:
+    cls = fc_class[i]
+    vals = p1_values(i, cls)
+    raw = {}
+    for fid, _, _, _, _, _, d, w in P1_FEATURES[cls]:
+        ref = pop_ref[cls][fid]
+        raw[fid] = w * d * (vals[fid] - ref["mean"]) / ref["sd"]
+    p8 = float(fc_prob[i, -1])
+    delta = p8 - BASE_RATE[cls]
+    pos = sum(v for v in raw.values() if v > 0) or 1.0
+    neg = -sum(v for v in raw.values() if v < 0)
+    neg_share = min(0.25, neg / (pos + neg)) if pos + neg else 0
+    contrib = {}
+    for fid, v in raw.items():
+        if v > 0:
+            contrib[fid] = r2(v / pos * delta * (1 + neg_share), 4)
+        else:
+            contrib[fid] = r2(v / (neg or 1) * delta * neg_share, 4)
+    # weekly prediction runs (last 8 Mondays): how p(W+8) evolved
+    runs = []
+    for k in range(8, 0, -1):
+        drift = (1 - 0.11 * k) if p8 >= POLICY["red_min_probability"] else (1 + rng1.normal(0, 0.06))
+        runs.append(r2(clamp(p8 * drift + rng1.normal(0, 0.015), 0.01, 0.99), 3))
+    runs.append(r2(p8, 3))
+    first_flag = next((k for k, v in enumerate(runs) if v >= POLICY["red_min_probability"]), None)
+    p1_sites.append({"site_id": sites[i]["site_id"], "failure_class": cls, "p8": r2(p8, 3),
+                     "values": {k: r2(v, 2) for k, v in vals.items()}, "contrib": contrib,
+                     "runs": runs, "first_flagged_run": first_flag,
+                     "ci90": [r2(max(0, p8 - 0.09 - rng1.uniform(0, 0.05)), 3), r2(min(0.99, p8 + 0.06 + rng1.uniform(0, 0.04)), 3)]})
+
+run_dates = [iso(TODAY - days(7 * k)) for k in range(8, -1, -1)]
+
+
+def pr_curve(prec_top, recall_at):
+    pts = []
+    for r in np.linspace(0.05, 0.95, 19):
+        p = prec_top * (1 - 0.55 * max(0, r - recall_at) ** 1.1) * (1.08 - 0.12 * r)
+        pts.append({"recall": r2(r, 2), "precision": r2(clamp(p, 0.08, 0.97), 3)})
+    return pts
+
+
+p1_models = []
+VERSIONS = {"capacity": ["1.0.0", "1.1.0", "1.2.1"], "power": ["1.0.0", "1.1.2"], "transport": ["0.9.0", "1.0.1"], "ran_hardware": ["0.9.0", "1.0.0"], "environmental": ["0.4.0"]}
+for sc in json.loads(json.dumps(model_scorecard)):
+    cls = sc["failure_class"]
+    pt = sc["precision_top_decile"]
+    br = BASE_RATE[cls]
+    calib = []
+    for b in range(10):
+        pred = (b + 0.5) / 10
+        noise = rng1.normal(0, 0.025 if cls in ("capacity", "power") else 0.05 if cls != "environmental" else 0.09) * min(1.0, 0.25 + pred * 1.8)
+        calib.append({"bin": f"{b * 10}-{b * 10 + 10}%", "predicted": r2(pred, 3), "observed": r2(clamp(pred + noise - (0.04 if cls == "environmental" and pred > 0.5 else 0), 0, 1), 3),
+                      "n": int(4000 * math.exp(-b * 0.55) + 20)})
+    lift = [r2(max(0.2, (pt / br) * math.exp(-d * 0.62)), 2) for d in range(10)]
+    hist = [r2(clamp(pt + rng1.normal(0, 0.02) - (0.03 if m < 3 else 0), 0.3, 0.95), 3) for m in range(12)]
+    p1_models.append({**sc, "base_rate": br, "algorithm": "Gradient-boosted trees (LightGBM), one model per class",
+                      "label": {"capacity": "Busy-hour PRB ≥ 90% on ≥ 3 days in a week, or DL P10 throughput < 2 Mbps",
+                                "power": "Site outage ≥ 30 min with root cause battery, rectifier or genset",
+                                "transport": "Backhaul P95 ≥ 95% for ≥ 3 days, or link outage ≥ 30 min",
+                                "ran_hardware": "Hardware-caused cell outage ≥ 30 min or unit replacement",
+                                "environmental": "Outage ≥ 1 h with flood, storm or landslide root cause"}[cls],
+                      "training_window": "Rolling 90-day features, labels over the forecast horizon; 24 months of history" if cls != "environmental" else "12 months (weather feed pending)",
+                      "features": len(P1_FEATURES[cls]), "versions": [{"version": v, "date": iso(TODAY - days(30 * (len(VERSIONS[cls]) - n) + 5)), "note": ["Back-test baseline", "Added PRB slope and device mix" if cls == "capacity" else "Feature refresh", "Calibration fix (isotonic)"][min(n, 2)]} for n, v in enumerate(VERSIONS[cls])],
+                      "current_version": VERSIONS[cls][-1], "pr_curve": pr_curve(pt, sc["recall"]), "calibration": calib, "lift_by_decile": lift,
+                      "precision_monthly": [{"month": (TODAY.replace(day=1) - days(30 * (11 - m))).strftime("%Y-%m"), "precision": hist[m]} for m in range(12)],
+                      "confusion_at_threshold": {"threshold": POLICY["red_min_probability"], "tp": int(400 * pt), "fp": int(400 * (1 - pt)), "fn": int(400 * pt * (1 / sc["recall"] - 1)), "tn": 18000},
+                      "retrain": "Monthly, champion/challenger on the last 3 months", "owner": "IOH Network Operations · DevX delivery"})
+
+p1_out = {
+    "as_of": iso(AS_OF), "freshness": "D-1", "run_dates": run_dates,
+    "feature_catalog": {cls: [{"id": f[0], "label": f[1], "unit": f[2], "source": f[3], "window": f[4], "definition": f[5], "direction": f[6], "importance": f[7],
+                               "pop_p50": pop_ref[cls][f[0]]["p50"], "pop_p90": pop_ref[cls][f[0]]["p90"]} for f in feats] for cls, feats in P1_FEATURES.items()},
+    "base_rate": BASE_RATE, "sites": p1_sites, "models": p1_models,
+}
+(DATA / "p1_planner.json").write_text(json.dumps(p1_out, separators=(",", ":"), ensure_ascii=False))
+print(f"Phase 1: {len(p1_sites)} explained predictions, {len(p1_models)} model cards")
+
+# ----------------------------------------------------------------------------------------
 # 16. Story check (PRD §4 Monday numbers, §10 generation rules)
 # ----------------------------------------------------------------------------------------
 red_by_class = Counter(fc_class[i] for i in range(N) if fc_cross[i])
