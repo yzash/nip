@@ -19,6 +19,16 @@ export const INTERVENTIONS: Record<string, { label: string; template: string; cl
   flood: { label: 'Site hardening', template: 'flood', class: 'capex_minor', towerco: false, installDays: 10 },
   small_cell: { label: 'Small cell', template: 'small_cell', class: 'capex_minor', towerco: false, installDays: 10 },
   '5g_add': { label: '5G AAU add', template: '5g_add', class: 'capex_minor', towerco: true, installDays: 12 },
+  reroute: { label: 'Transport reroute', template: 'reroute', class: 'noncapex_opex', towerco: false, installDays: 3 },
+  spares_swap: { label: 'Unit swap from spares', template: 'spares_swap', class: 'noncapex_opex', towerco: false, installDays: 4 },
+  preemptive: { label: 'Pre-emptive visit and standby genset', template: 'preemptive', class: 'noncapex_opex', towerco: false, installDays: 2 },
+}
+
+// OpEx rungs (Phase 1): no CapEx BOQ, only service lines and spares from regional stock.
+const OPEX_TEMPLATES: Record<string, [string, number][]> = {
+  reroute: [['SVC-INSTALL', 1], ['SVC-LOGISTIC', 1]], // per link, not per site
+  spares_swap: [['RRU-4T-L18', 1], ['SVC-LOGISTIC', 1], ['SVC-DT-OPT', 1]],
+  preemptive: [['ATS-PNL', 1], ['SVC-LOGISTIC', 1]],
 }
 
 export function interventionFromOption(name: string): string {
@@ -31,7 +41,10 @@ export function interventionFromOption(name: string): string {
   if (n.includes('solar')) return 'solar'
   if (n.includes('microwave')) return 'transport'
   if (n.includes('fibre')) return 'fibre'
-  if (n.includes('modernisation') || n.includes('unit swap')) return 'ran_swap'
+  if (n.includes('modernisation')) return 'ran_swap'
+  if (n.includes('unit swap') || n.includes('spares')) return 'spares_swap'
+  if (n.includes('reroute')) return 'reroute'
+  if (n.includes('pre-emptive') || n.includes('standby')) return 'preemptive'
   if (n.includes('genset') || n.includes('generator')) return 'power'
   if (n.includes('peering port')) return 'transport'
   if (n.includes('hardening')) return 'flood'
@@ -134,12 +147,12 @@ export function buildPlan(opts: {
   const district_label = dnames.length === 1 ? dnames[0] : `${D.provById[sites[0].province_id].name} (${dnames.length} districts)`
 
   // BOQ aggregated by SKU
-  const tmpl = D.meta.boq_templates[iv.template] ?? []
+  const tmpl = D.meta.boq_templates[iv.template] ?? OPEX_TEMPLATES[iv.template] ?? []
   const skuMeta = Object.fromEntries(D.meta.skus.map((s) => [s.sku, s]))
   const boq: BoqAgg[] = tmpl
     .map(([sku, q]) => {
       const m = skuMeta[sku]
-      const qty = (q || 1) * n
+      const qty = (q || 1) * (iv.template === 'reroute' ? 1 : n)
       return { sku, description: m.description, category: m.category, qty, unit_cost_idr: m.unit_cost_idr, total_idr: qty * m.unit_cost_idr, lead_days: m.lead_days }
     })
     .filter((b) => b.qty > 0)
